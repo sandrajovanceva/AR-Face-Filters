@@ -6,9 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.arfilterapp"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.arfilterapp"
@@ -40,7 +38,7 @@ android {
         compose = true
     }
     androidResources {
-        noCompress += listOf("tflite", "task")
+        noCompress += listOf("tflite", "task", "glb", "sfb")
     }
 }
 
@@ -58,15 +56,8 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // CameraX
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.androidx.camera.video)
-
-    // MediaPipe face landmark detection
-    implementation(libs.mediapipe.tasks.vision)
+    // SceneView — ARCore + 3D model rendering (replaces CameraX + MediaPipe)
+    implementation(libs.arsceneview)
 
     // Runtime camera permission handling
     implementation(libs.accompanist.permissions)
