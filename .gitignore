@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Dev-only model previews rendered by tools/preview_glb.py
+/tools/preview/

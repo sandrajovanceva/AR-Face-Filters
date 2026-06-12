@@ -1,6 +1,7 @@
 package com.example.arfilterapp.utils
 
 import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -9,34 +10,29 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-
-val CAMERA_PERMISSIONS = buildList {
-    add(Manifest.permission.CAMERA)
-    add(Manifest.permission.RECORD_AUDIO)
-    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-        add(Manifest.permission.READ_MEDIA_IMAGES)
-        add(Manifest.permission.READ_MEDIA_VIDEO)
-    } else {
-        add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-    }
-}.toTypedArray()
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RequestCameraPermission(
     onGranted: @Composable () -> Unit
 ) {
-    val permissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    val permissions = buildList {
+        add(Manifest.permission.CAMERA)
+        // Пред API 29 за зачувување во галерија треба storage дозвола
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
+    val permissionState = rememberMultiplePermissionsState(permissions)
 
     LaunchedEffect(Unit) {
-        if (!permissionState.status.isGranted) {
-            permissionState.launchPermissionRequest()
+        if (!permissionState.allPermissionsGranted) {
+            permissionState.launchMultiplePermissionRequest()
         }
     }
 
-    if (permissionState.status.isGranted) {
+    if (permissionState.allPermissionsGranted) {
         onGranted()
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

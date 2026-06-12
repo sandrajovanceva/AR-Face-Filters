@@ -38,7 +38,7 @@ android {
         compose = true
     }
     androidResources {
-        noCompress += listOf("tflite", "task", "glb", "sfb")
+        noCompress += listOf("glb")
     }
 }
 
