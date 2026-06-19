@@ -53,6 +53,7 @@ import com.example.arfilterapp.filters.FilterType
 import com.example.arfilterapp.utils.RequestCameraPermission
 import com.example.arfilterapp.utils.captureSurface
 import com.example.arfilterapp.utils.saveToGallery
+import com.example.arfilterapp.utils.shareImage
 import com.google.ar.core.AugmentedFace
 import com.google.ar.core.Config
 import com.google.ar.core.Pose
@@ -79,11 +80,6 @@ fun CameraScreen() {
 
 private class AttachedNode(val node: ModelNode, val attachment: FilterAttachment)
 
-/**
- * Selfie preview-то е огледално, а ARCore позите на лицето не се —
- * затоа ја рефлектираме позата хоризонтално во просторот на камерата
- * за виртуелната содржина да се совпадне со огледалната слика.
- */
 private fun mirrorInCameraSpace(pose: Pose, cameraPose: Pose): Pose {
     val local = cameraPose.inverse().compose(pose)
     val mirrored = Pose(
@@ -111,8 +107,6 @@ private fun ARContent() {
     var isCapturing by remember { mutableStateOf(false) }
     var capturedPhoto by remember { mutableStateOf<Bitmap?>(null) }
 
-    // Промена на филтер — надвор од frame callback-от, за да важи
-    // и кога нема следено лице и да не го кочи рендерирањето
     LaunchedEffect(selectedFilter) {
         attachedNodes.forEach {
             childNodes.remove(it.node)
@@ -129,7 +123,6 @@ private fun ARContent() {
         }
     }
 
-    // Слика → preview екран (како Snapchat); зачувување дури на „Save"
     fun capturePhoto() {
         val view = sceneView ?: return
         if (isCapturing || capturedPhoto != null) return
@@ -164,6 +157,18 @@ private fun ARContent() {
         }
     }
 
+    fun shareCapturedPhoto() {
+        val photo = capturedPhoto ?: return
+        scope.launch {
+            val shared = shareImage(context, photo)
+            if (!shared) {
+                statusMessage = "Couldn't share photo"
+                delay(2000)
+                statusMessage = null
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         ARScene(
@@ -182,7 +187,6 @@ private fun ARContent() {
                     .firstOrNull { it.trackingState == TrackingState.TRACKING }
                 val cameraPose = frame.camera.displayOrientedPose
 
-                // Секој frame — само позиционирање на веќе создадените нодови
                 attachedNodes.forEach {
                     if (trackedFace != null) {
                         val pose = mirrorInCameraSpace(
@@ -199,7 +203,6 @@ private fun ARContent() {
             }
         )
 
-        // Затемнување на дното за читливост на контролите
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -241,7 +244,6 @@ private fun ARContent() {
             Spacer(modifier = Modifier.height(28.dp))
         }
 
-        // Блиц-ефект при сликање
         if (flashAlpha.value > 0f) {
             Box(
                 modifier = Modifier
@@ -250,16 +252,15 @@ private fun ARContent() {
             )
         }
 
-        // Preview на сликаната фотографија — Retake или Save
         capturedPhoto?.let { photo ->
             PhotoPreview(
                 photo = photo,
                 onRetake = { capturedPhoto = null },
+                onShare = ::shareCapturedPhoto,
                 onSave = ::saveCapturedPhoto
             )
         }
 
-        // Порака „зачувано во галерија"
         AnimatedVisibility(
             visible = statusMessage != null,
             modifier = Modifier
@@ -285,12 +286,12 @@ private fun ARContent() {
 private fun PhotoPreview(
     photo: Bitmap,
     onRetake: () -> Unit,
+    onShare: () -> Unit,
     onSave: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // голтни ги сите тапнувања — камерата под preview-то да не реагира
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -304,7 +305,6 @@ private fun PhotoPreview(
             contentScale = ContentScale.Crop
         )
 
-        // Затвори (= retake) горе-лево
         Text(
             text = "✕",
             color = Color.White,
@@ -322,7 +322,7 @@ private fun PhotoPreview(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 44.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = "↺  Retake",
@@ -333,18 +333,29 @@ private fun PhotoPreview(
                     .clip(CircleShape)
                     .background(Color.Black.copy(alpha = 0.5f))
                     .clickable(onClick = onRetake)
-                    .padding(horizontal = 24.dp, vertical = 13.dp)
+                    .padding(horizontal = 20.dp, vertical = 13.dp)
             )
             Text(
-                text = "Save  ✓",
+                text = "Save  ⤓",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(onClick = onSave)
+                    .padding(horizontal = 20.dp, vertical = 13.dp)
+            )
+            Text(
+                text = "Share  ↗",
                 color = Color.Black,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(Color.White)
-                    .clickable(onClick = onSave)
-                    .padding(horizontal = 28.dp, vertical = 13.dp)
+                    .clickable(onClick = onShare)
+                    .padding(horizontal = 22.dp, vertical = 13.dp)
             )
         }
     }

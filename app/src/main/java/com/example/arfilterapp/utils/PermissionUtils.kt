@@ -19,7 +19,6 @@ fun RequestCameraPermission(
 ) {
     val permissions = buildList {
         add(Manifest.permission.CAMERA)
-        // Пред API 29 за зачувување во галерија треба storage дозвола
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }

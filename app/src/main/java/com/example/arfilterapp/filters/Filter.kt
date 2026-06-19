@@ -5,15 +5,6 @@ import com.google.ar.core.AugmentedFace.RegionType
 import com.google.ar.core.Pose
 import io.github.sceneview.math.Position
 
-/**
- * Еден 3D модел закачен на одреден регион од лицето.
- *
- * @param modelPath патека до .glb во assets
- * @param region регион на лицето; null = center pose (центар на главата)
- * @param offset поместување во метри, во локалниот простор на регионот
- * @param scaleToUnits скалирај го моделот да собере во толку метри;
- *        null = моделот е веќе авториран во метри
- */
 data class FilterAttachment(
     val modelPath: String,
     val region: RegionType? = null,
@@ -107,7 +98,7 @@ enum class FilterType(
         "Crown", "👑", listOf(
             FilterAttachment(
                 modelPath = "models/crown.glb",
-                region = null, // центар на главата
+                region = null,
                 offset = Position(0f, 0.08f, -0.005f)
             )
         )
@@ -142,7 +133,7 @@ enum class FilterType(
             ),
             FilterAttachment(
                 modelPath = "models/clown_hat.glb",
-                region = null, // врв на главата
+                region = null,
                 offset = Position(0f, 0.075f, -0.005f)
             )
         )
