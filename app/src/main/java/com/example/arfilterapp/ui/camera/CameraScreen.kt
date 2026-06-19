@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import android.graphics.Bitmap
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,9 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +59,7 @@ import com.example.arfilterapp.utils.RequestCameraPermission
 import com.example.arfilterapp.utils.captureSurface
 import com.example.arfilterapp.utils.saveToGallery
 import com.example.arfilterapp.utils.shareImage
+import com.example.arfilterapp.utils.stampIoLogo
 import com.google.ar.core.AugmentedFace
 import com.google.ar.core.Config
 import com.google.ar.core.Pose
@@ -133,7 +139,8 @@ private fun ARContent() {
                 flashAlpha.animateTo(0f, tween(durationMillis = 350))
             }
             capturedPhoto = try {
-                captureSurface(view)
+                val shot = captureSurface(view)
+                if (selectedFilter == FilterType.GRADUATION) stampIoLogo(shot) else shot
             } catch (e: Exception) {
                 statusMessage = "Couldn't capture photo"
                 null
@@ -242,6 +249,14 @@ private fun ARContent() {
             Spacer(modifier = Modifier.height(16.dp))
             ShutterButton(enabled = !isCapturing, onClick = ::capturePhoto)
             Spacer(modifier = Modifier.height(28.dp))
+        }
+
+        if (selectedFilter == FilterType.GRADUATION) {
+            IoLogoBadge(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 44.dp)
+            )
         }
 
         if (flashAlpha.value > 0f) {
@@ -358,6 +373,38 @@ private fun PhotoPreview(
                     .padding(horizontal = 22.dp, vertical = 13.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun IoLogoBadge(modifier: Modifier = Modifier) {
+    val blue = Color(0xFF0A70DE)
+    Canvas(modifier = modifier.size(width = 70.dp, height = 32.dp)) {
+        val h = size.height
+        val ro = h * 0.5f
+        val strokeW = h * 0.20f
+        val barW = h * 0.26f
+        val gap = h * 0.24f
+
+        // "O" ring on the right
+        val oCx = size.width - ro
+        val oCy = h / 2f
+        drawCircle(
+            color = blue,
+            radius = ro - strokeW / 2f,
+            center = Offset(oCx, oCy),
+            style = Stroke(width = strokeW)
+        )
+
+        // "I" bar to the left of the "O"
+        val barRight = oCx - ro - gap
+        val barLeft = barRight - barW
+        drawRoundRect(
+            color = blue,
+            topLeft = Offset(barLeft, 0f),
+            size = Size(barW, h),
+            cornerRadius = CornerRadius(barW / 2f, barW / 2f)
+        )
     }
 }
 

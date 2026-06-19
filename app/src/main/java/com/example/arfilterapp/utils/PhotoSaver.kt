@@ -4,6 +4,10 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
 import android.os.Build
 import android.provider.MediaStore
 import android.view.TextureView
@@ -19,6 +23,50 @@ import java.util.Locale
 fun captureSurface(view: TextureView): Bitmap =
     view.getBitmap(view.width, view.height)
         ?: throw IllegalStateException("Surface not ready for capture")
+
+/**
+ * Draws a small Google I/O-style badge (a blue "I" bar + a blue "O" ring) into
+ * the bottom-right corner of the photo. Returns a mutable copy with the stamp.
+ */
+fun stampIoLogo(src: Bitmap): Bitmap {
+    val bmp =
+        if (src.isMutable) src else src.copy(Bitmap.Config.ARGB_8888, true)
+    val canvas = Canvas(bmp)
+    val w = bmp.width.toFloat()
+    val h = bmp.height.toFloat()
+
+    val logoH = h * 0.085f          // overall badge height
+    val ro = logoH * 0.5f           // "O" outer radius
+    val strokeW = logoH * 0.20f     // "O" ring thickness
+    val barW = logoH * 0.26f        // "I" bar width
+    val gap = logoH * 0.24f         // space between "I" and "O"
+    val margin = h * 0.03f          // distance from the image edges
+
+    val blue = Color.rgb(10, 112, 222)   // matches the app's I/O blue
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = blue
+        setShadowLayer(logoH * 0.14f, 0f, logoH * 0.05f, Color.argb(130, 0, 0, 0))
+    }
+
+    // "O" ring — bottom-right
+    val oCx = w - margin - ro
+    val oCy = h - margin - ro
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = strokeW
+    canvas.drawCircle(oCx, oCy, ro - strokeW / 2f, paint)
+
+    // "I" bar — sits to the left of the "O"
+    paint.style = Paint.Style.FILL
+    val barRight = oCx - ro - gap
+    val barLeft = barRight - barW
+    val barTop = h - margin - logoH
+    val barBottom = h - margin
+    val r = barW / 2f
+    canvas.drawRoundRect(RectF(barLeft, barTop, barRight, barBottom), r, r, paint)
+
+    return bmp
+}
 
 suspend fun shareImage(context: Context, bitmap: Bitmap): Boolean {
     val uri = withContext(Dispatchers.IO) {

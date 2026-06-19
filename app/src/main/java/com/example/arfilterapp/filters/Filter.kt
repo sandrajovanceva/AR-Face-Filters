@@ -137,5 +137,15 @@ enum class FilterType(
                 offset = Position(0f, 0.075f, -0.005f)
             )
         )
+    ),
+
+    GRADUATION(
+        "Graduation", "🎓", listOf(
+            FilterAttachment(
+                modelPath = "models/graduation_cap.glb",
+                region = null, // centerPose = центар на главата
+                offset = Position(0f, 0.10f, -0.015f)
+            )
+        )
     )
 }
