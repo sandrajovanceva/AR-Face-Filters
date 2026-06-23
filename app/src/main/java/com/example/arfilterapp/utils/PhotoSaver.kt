@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.os.Build
 import android.provider.MediaStore
 import android.view.TextureView
@@ -25,8 +26,9 @@ fun captureSurface(view: TextureView): Bitmap =
         ?: throw IllegalStateException("Surface not ready for capture")
 
 /**
- * Draws a small Google I/O-style badge (a blue "I" bar + a blue "O" ring) into
- * the bottom-right corner of the photo. Returns a mutable copy with the stamp.
+ * Draws a Google I/O badge (a dark-navy "I" bar + a lighter-blue "O" ring),
+ * centered near the top of the photo (over the graduation cap). Returns a
+ * mutable copy with the stamp.
  */
 fun stampIoLogo(src: Bitmap): Bitmap {
     val bmp =
@@ -35,36 +37,115 @@ fun stampIoLogo(src: Bitmap): Bitmap {
     val w = bmp.width.toFloat()
     val h = bmp.height.toFloat()
 
-    val logoH = h * 0.085f          // overall badge height
+    val logoH = h * 0.075f          // overall badge height
     val ro = logoH * 0.5f           // "O" outer radius
     val strokeW = logoH * 0.20f     // "O" ring thickness
     val barW = logoH * 0.26f        // "I" bar width
-    val gap = logoH * 0.24f         // space between "I" and "O"
-    val margin = h * 0.03f          // distance from the image edges
+    val gap = logoH * 0.22f         // space between "I" and "O"
+    val topMargin = h * 0.05f       // distance from the top edge
 
-    val blue = Color.rgb(10, 112, 222)   // matches the app's I/O blue
+    val navy = Color.rgb(26, 40, 120)    // darker "I"
+    val blue = Color.rgb(45, 112, 210)   // lighter "O"
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = blue
         setShadowLayer(logoH * 0.14f, 0f, logoH * 0.05f, Color.argb(130, 0, 0, 0))
     }
 
-    // "O" ring — bottom-right
-    val oCx = w - margin - ro
-    val oCy = h - margin - ro
+    // Center the "I  O" group horizontally, near the top
+    val groupW = barW + gap + 2f * ro
+    val startX = (w - groupW) / 2f
+    val top = topMargin
+    val bottom = topMargin + logoH
+
+    // "I" bar — darker navy
+    paint.color = navy
+    paint.style = Paint.Style.FILL
+    val r = barW / 2f
+    canvas.drawRoundRect(RectF(startX, top, startX + barW, bottom), r, r, paint)
+
+    // "O" ring — lighter blue
+    paint.color = blue
     paint.style = Paint.Style.STROKE
     paint.strokeWidth = strokeW
+    val oCx = startX + barW + gap + ro
+    val oCy = top + ro
     canvas.drawCircle(oCx, oCy, ro - strokeW / 2f, paint)
 
-    // "I" bar — sits to the left of the "O"
-    paint.style = Paint.Style.FILL
-    val barRight = oCx - ro - gap
-    val barLeft = barRight - barW
-    val barTop = h - margin - logoH
-    val barBottom = h - margin
-    val r = barW / 2f
-    canvas.drawRoundRect(RectF(barLeft, barTop, barRight, barBottom), r, r, paint)
+    return bmp
+}
 
+private val CONFETTI_RGB = intArrayOf(
+    Color.rgb(255, 200, 40), Color.rgb(45, 112, 210), Color.rgb(220, 60, 70),
+    Color.rgb(60, 190, 110), Color.rgb(170, 90, 220), Color.rgb(245, 130, 190)
+)
+
+private fun drawIoLogo(
+    canvas: Canvas, cx: Float, cy: Float, angle: Float, s: Float,
+    navy: Int, blue: Int, paint: Paint
+) {
+    val ro = s * 0.45f
+    val strokeW = s * 0.20f
+    val barW = s * 0.24f
+    val gap = s * 0.16f
+    val groupW = barW + gap + 2f * ro
+    val left = cx - groupW / 2f
+    canvas.save()
+    canvas.rotate(angle, cx, cy)
+    paint.style = Paint.Style.FILL
+    paint.color = navy
+    val r = barW / 2f
+    canvas.drawRoundRect(RectF(left, cy - s / 2f, left + barW, cy + s / 2f), r, r, paint)
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = strokeW
+    paint.color = blue
+    canvas.drawCircle(left + barW + gap + ro, cy, ro - strokeW / 2f, paint)
+    canvas.restore()
+}
+
+/**
+ * Draws a "FINKI GRADUATES" banner near the top of the photo plus a scatter of
+ * confetti across the upper half. Returns a mutable copy with the overlay.
+ */
+fun stampGraduationBanner(src: Bitmap): Bitmap {
+    val bmp =
+        if (src.isMutable) src else src.copy(Bitmap.Config.ARGB_8888, true)
+    val canvas = Canvas(bmp)
+    val w = bmp.width.toFloat()
+    val h = bmp.height.toFloat()
+
+    val navy = Color.rgb(26, 40, 120)
+    val blue = Color.rgb(60, 134, 224)
+
+    val rnd = java.util.Random(7)  // fixed seed → stable, reproducible scatter
+    val confetti = Paint(Paint.ANTI_ALIAS_FLAG)
+    val logoPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    repeat(120) {
+        val cx = rnd.nextFloat() * w
+        val cy = rnd.nextFloat() * h        // across the whole frame, like the live view
+        val angle = rnd.nextFloat() * 360f
+        if (rnd.nextInt(100) < 32) {        // ~32% are falling IO logos
+            val s = w * (0.04f + rnd.nextFloat() * 0.025f)
+            drawIoLogo(canvas, cx, cy, angle, s, navy, blue, logoPaint)
+        } else {
+            val cw = w * (0.012f + rnd.nextFloat() * 0.018f)
+            val ch = cw * (0.5f + rnd.nextFloat() * 0.8f)
+            confetti.color = CONFETTI_RGB[rnd.nextInt(CONFETTI_RGB.size)]
+            canvas.save()
+            canvas.rotate(angle, cx, cy)
+            canvas.drawRect(cx - cw / 2f, cy - ch / 2f, cx + cw / 2f, cy + ch / 2f, confetti)
+            canvas.restore()
+        }
+    }
+
+    val ty = h * 0.10f
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = w * 0.065f               // ~matches the live 24.sp banner
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+        setShadowLayer(w * 0.012f, 0f, w * 0.004f, Color.argb(170, 0, 0, 0))
+    }
+    canvas.drawText("🎓 FINKI GRADUATES 🎓", w / 2f, ty, textPaint)
     return bmp
 }
 

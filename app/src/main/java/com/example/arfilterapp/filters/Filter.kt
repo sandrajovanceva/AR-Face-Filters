@@ -28,6 +28,22 @@ enum class FilterType(
 ) {
     NONE("None", "✕", emptyList()),
 
+    GRADUATION(
+        "Graduation", "🎓", listOf(
+            FilterAttachment(
+                modelPath = "models/graduation_cap.glb",
+                region = null, // centerPose = центар на главата
+                offset = Position(0f, 0.10f, -0.015f)
+            ),
+            FilterAttachment(
+                modelPath = "models/io_logo.glb",
+                region = null, // центрирано на предниот дел од капата
+                offset = Position(-0.003f, 0.108f, 0.05f),
+                scaleToUnits = 0.03f
+            )
+        )
+    ),
+
     GLASSES(
         "Glasses", "👓", listOf(
             FilterAttachment(
@@ -135,16 +151,6 @@ enum class FilterType(
                 modelPath = "models/clown_hat.glb",
                 region = null,
                 offset = Position(0f, 0.075f, -0.005f)
-            )
-        )
-    ),
-
-    GRADUATION(
-        "Graduation", "🎓", listOf(
-            FilterAttachment(
-                modelPath = "models/graduation_cap.glb",
-                region = null, // centerPose = центар на главата
-                offset = Position(0f, 0.10f, -0.015f)
             )
         )
     )

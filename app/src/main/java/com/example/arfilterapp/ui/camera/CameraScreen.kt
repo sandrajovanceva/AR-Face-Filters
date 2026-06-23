@@ -2,8 +2,12 @@ package com.example.arfilterapp.ui.camera
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import android.graphics.Bitmap
 import androidx.compose.animation.fadeIn
@@ -47,7 +51,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -59,7 +65,9 @@ import com.example.arfilterapp.utils.RequestCameraPermission
 import com.example.arfilterapp.utils.captureSurface
 import com.example.arfilterapp.utils.saveToGallery
 import com.example.arfilterapp.utils.shareImage
-import com.example.arfilterapp.utils.stampIoLogo
+import com.example.arfilterapp.utils.stampGraduationBanner
+import kotlin.math.sin
+import kotlin.random.Random
 import com.google.ar.core.AugmentedFace
 import com.google.ar.core.Config
 import com.google.ar.core.Pose
@@ -140,7 +148,7 @@ private fun ARContent() {
             }
             capturedPhoto = try {
                 val shot = captureSurface(view)
-                if (selectedFilter == FilterType.GRADUATION) stampIoLogo(shot) else shot
+                if (selectedFilter == FilterType.GRADUATION) stampGraduationBanner(shot) else shot
             } catch (e: Exception) {
                 statusMessage = "Couldn't capture photo"
                 null
@@ -210,6 +218,10 @@ private fun ARContent() {
             }
         )
 
+        if (selectedFilter == FilterType.GRADUATION) {
+            GraduationOverlay()
+        }
+
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -251,14 +263,6 @@ private fun ARContent() {
             Spacer(modifier = Modifier.height(28.dp))
         }
 
-        if (selectedFilter == FilterType.GRADUATION) {
-            IoLogoBadge(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = 44.dp)
-            )
-        }
-
         if (flashAlpha.value > 0f) {
             Box(
                 modifier = Modifier
@@ -293,6 +297,100 @@ private fun ARContent() {
                     .background(Color.Black.copy(alpha = 0.65f), CircleShape)
                     .padding(horizontal = 18.dp, vertical = 10.dp)
             )
+        }
+    }
+}
+
+private val CONFETTI_COLORS = listOf(
+    Color(0xFFFFC828), Color(0xFF2D70D2), Color(0xFFDC3C46),
+    Color(0xFF3CBE6E), Color(0xFFAA5ADC), Color(0xFFF582BE)
+)
+private val FINKI_NAVY = Color(0xFF1A2878)
+private val FINKI_BLUE = Color(0xFF3C86E0)
+
+private class ConfettiPiece(seed: Int) {
+    private val r = Random(seed * 7919 + 13)
+    val isLogo = r.nextInt(100) < 32    // ~32% are falling IO logos
+    val x = r.nextFloat()
+    val startY = r.nextFloat()
+    val speed = 0.6f + r.nextFloat() * 0.9f
+    val spin = 0.4f + r.nextFloat() * 1.2f
+    val phase = r.nextFloat() * 6.28f
+    val w = 14f + r.nextFloat() * 18f
+    val h = 8f + r.nextFloat() * 12f
+    val sizeFactor = 0.75f + r.nextFloat() * 0.6f
+    val color = CONFETTI_COLORS[r.nextInt(CONFETTI_COLORS.size)]
+}
+
+private fun DrawScope.drawFallingIoLogo(cx: Float, cy: Float, angle: Float, s: Float) {
+    val ro = s * 0.45f
+    val strokeW = s * 0.20f
+    val barW = s * 0.24f
+    val gap = s * 0.16f
+    val groupW = barW + gap + 2f * ro
+    rotate(degrees = angle, pivot = Offset(cx, cy)) {
+        val left = cx - groupW / 2f
+        drawRoundRect(
+            color = FINKI_NAVY,
+            topLeft = Offset(left, cy - s / 2f),
+            size = Size(barW, s),
+            cornerRadius = CornerRadius(barW / 2f, barW / 2f)
+        )
+        val oCx = left + barW + gap + ro
+        drawCircle(
+            color = FINKI_BLUE,
+            radius = ro - strokeW / 2f,
+            center = Offset(oCx, cy),
+            style = Stroke(width = strokeW)
+        )
+    }
+}
+
+@Composable
+private fun GraduationOverlay(modifier: Modifier = Modifier) {
+    val pieces = remember { List(46) { ConfettiPiece(it) } }
+    val transition = rememberInfiniteTransition(label = "confetti")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(5000, easing = LinearEasing)),
+        label = "phase"
+    )
+
+    Box(modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            pieces.forEach { p ->
+                val y = ((p.startY + phase * p.speed) % 1.15f) * size.height
+                val x = (p.x + 0.03f * sin(phase * 6.28f * p.speed + p.phase)) * size.width
+                val angle = phase * 360f * p.spin + p.phase * 57f
+                if (p.isLogo) {
+                    drawFallingIoLogo(x, y, angle, size.width * 0.05f * p.sizeFactor)
+                } else {
+                    rotate(degrees = angle, pivot = Offset(x, y)) {
+                        drawRect(
+                            color = p.color,
+                            topLeft = Offset(x - p.w / 2f, y - p.h / 2f),
+                            size = Size(p.w, p.h)
+                        )
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 60.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = "🎓", fontSize = 24.sp)
+            Text(
+                text = "FINKI GRADUATES",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(text = "🎓", fontSize = 24.sp)
         }
     }
 }
@@ -373,38 +471,6 @@ private fun PhotoPreview(
                     .padding(horizontal = 22.dp, vertical = 13.dp)
             )
         }
-    }
-}
-
-@Composable
-private fun IoLogoBadge(modifier: Modifier = Modifier) {
-    val blue = Color(0xFF0A70DE)
-    Canvas(modifier = modifier.size(width = 70.dp, height = 32.dp)) {
-        val h = size.height
-        val ro = h * 0.5f
-        val strokeW = h * 0.20f
-        val barW = h * 0.26f
-        val gap = h * 0.24f
-
-        // "O" ring on the right
-        val oCx = size.width - ro
-        val oCy = h / 2f
-        drawCircle(
-            color = blue,
-            radius = ro - strokeW / 2f,
-            center = Offset(oCx, oCy),
-            style = Stroke(width = strokeW)
-        )
-
-        // "I" bar to the left of the "O"
-        val barRight = oCx - ro - gap
-        val barLeft = barRight - barW
-        drawRoundRect(
-            color = blue,
-            topLeft = Offset(barLeft, 0f),
-            size = Size(barW, h),
-            cornerRadius = CornerRadius(barW / 2f, barW / 2f)
-        )
     }
 }
 

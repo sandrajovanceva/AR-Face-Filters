@@ -331,10 +331,30 @@ def write_glb(path, parts):
     print(f"wrote {path} ({total} bytes)")
 
 
+def box():
+    """Unit cube centered at origin, edge length 1, flat per-face normals."""
+    faces = [
+        ((0, 0, 1), [(-.5, -.5, .5), (.5, -.5, .5), (.5, .5, .5), (-.5, .5, .5)]),
+        ((0, 0, -1), [(.5, -.5, -.5), (-.5, -.5, -.5), (-.5, .5, -.5), (.5, .5, -.5)]),
+        ((1, 0, 0), [(.5, -.5, .5), (.5, -.5, -.5), (.5, .5, -.5), (.5, .5, .5)]),
+        ((-1, 0, 0), [(-.5, -.5, -.5), (-.5, -.5, .5), (-.5, .5, .5), (-.5, .5, -.5)]),
+        ((0, 1, 0), [(-.5, .5, .5), (.5, .5, .5), (.5, .5, -.5), (-.5, .5, -.5)]),
+        ((0, -1, 0), [(-.5, -.5, -.5), (.5, -.5, -.5), (.5, -.5, .5), (-.5, -.5, .5)]),
+    ]
+    verts, idx = [], []
+    for n, corners in faces:
+        base = len(verts)
+        for c in corners:
+            verts.append((c[0], c[1], c[2], n[0], n[1], n[2]))
+        idx += [base, base + 1, base + 2, base, base + 2, base + 3]
+    return verts, idx
+
+
 # ------------------------------------------------------------------- models
 
 SPHERE = sphere()
 CYL_OPEN = cylinder(caps=False)
+BOX = box()
 
 BROWN = (0.36, 0.22, 0.10, 1.0)
 DOG_NOSE = (0.10, 0.07, 0.06, 1.0)
@@ -443,7 +463,18 @@ clown_hat.append(part(SPHERE, (0.014, 0.014, 0.014),
                       trans=(-math.sin(tilt) * HAT_H, math.cos(tilt) * HAT_H, 0),
                       color=WHITE, roughness=0.85))
 
+# --- Google I/O logo: dark-navy "I" bar + lighter-blue "O" ring, facing +Z ---
+IO_NAVY = (0.11, 0.16, 0.52, 1.0)
+IO_BLUE = (0.20, 0.45, 0.80, 1.0)
+io_logo = [
+    part(BOX, scale=(0.011, 0.048, 0.007), trans=(-0.020, 0, 0),
+         color=IO_NAVY, roughness=0.4),
+    part(torus(0.018, 0.006, y=0.0), rot=(90, 0, 0), trans=(0.018, 0, 0),
+         color=IO_BLUE, roughness=0.4),
+]
+
 MODELS = {
+    "io_logo.glb": io_logo,
     "dog_ear_l.glb": dog_ear_l,
     "dog_ear_r.glb": mirror_x(dog_ear_l),
     "dog_nose.glb": dog_nose,
