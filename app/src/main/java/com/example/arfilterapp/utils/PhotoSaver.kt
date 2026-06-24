@@ -149,6 +149,47 @@ fun stampGraduationBanner(src: Bitmap): Bitmap {
     return bmp
 }
 
+/**
+ * Draws a "HARDEST SUBJECT" card near the top of the photo with the chosen
+ * subject. Auto-shrinks the subject text to fit. Returns a mutable copy.
+ */
+fun stampHardestSubject(src: Bitmap, subject: String): Bitmap {
+    val bmp =
+        if (src.isMutable) src else src.copy(Bitmap.Config.ARGB_8888, true)
+    val canvas = Canvas(bmp)
+    val w = bmp.width.toFloat()
+    val h = bmp.height.toFloat()
+
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 200, 40)
+        textAlign = Paint.Align.CENTER
+        textSize = w * 0.04f
+        typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+        setShadowLayer(w * 0.01f, 0f, w * 0.003f, Color.argb(180, 0, 0, 0))
+    }
+    val subjectPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        textSize = w * 0.058f
+        typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+        setShadowLayer(w * 0.012f, 0f, w * 0.004f, Color.argb(190, 0, 0, 0))
+    }
+    while (subjectPaint.measureText(subject) > w * 0.86f && subjectPaint.textSize > w * 0.02f) {
+        subjectPaint.textSize -= w * 0.003f
+    }
+
+    val titleY = h * 0.09f
+    val subjectY = titleY + w * 0.075f
+    val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(140, 0, 0, 0) }
+    canvas.drawRoundRect(
+        RectF(w * 0.06f, titleY - w * 0.05f, w * 0.94f, subjectY + w * 0.025f),
+        w * 0.03f, w * 0.03f, bg
+    )
+    canvas.drawText("🔥 HARDEST SUBJECT 🔥", w / 2f, titleY, titlePaint)
+    canvas.drawText(subject, w / 2f, subjectY, subjectPaint)
+    return bmp
+}
+
 suspend fun shareImage(context: Context, bitmap: Bitmap): Boolean {
     val uri = withContext(Dispatchers.IO) {
         try {

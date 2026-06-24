@@ -44,6 +44,9 @@ enum class FilterType(
         )
     ),
 
+    // Спин-тркало за најтежок предмет — нема 3D модел, само 2D overlay
+    HARDEST("Hardest", "🎲", emptyList()),
+
     GLASSES(
         "Glasses", "👓", listOf(
             FilterAttachment(

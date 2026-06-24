@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +58,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.arfilterapp.filters.FilterAttachment
@@ -66,6 +68,7 @@ import com.example.arfilterapp.utils.captureSurface
 import com.example.arfilterapp.utils.saveToGallery
 import com.example.arfilterapp.utils.shareImage
 import com.example.arfilterapp.utils.stampGraduationBanner
+import com.example.arfilterapp.utils.stampHardestSubject
 import kotlin.math.sin
 import kotlin.random.Random
 import com.google.ar.core.AugmentedFace
@@ -94,6 +97,16 @@ fun CameraScreen() {
 
 private class AttachedNode(val node: ModelNode, val attachment: FilterAttachment)
 
+private val HARDEST_SUBJECTS = listOf(
+    "Веројатност",
+    "Структурно Програмирање",
+    "Алгоритми",
+    "Калкулус",
+    "Оперативни системи",
+    "Вовед во наука на податоците",
+    "Напредно програмирање"
+)
+
 private fun mirrorInCameraSpace(pose: Pose, cameraPose: Pose): Pose {
     val local = cameraPose.inverse().compose(pose)
     val mirrored = Pose(
@@ -120,6 +133,7 @@ private fun ARContent() {
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isCapturing by remember { mutableStateOf(false) }
     var capturedPhoto by remember { mutableStateOf<Bitmap?>(null) }
+    var hardestSubject by remember { mutableStateOf(HARDEST_SUBJECTS.first()) }
 
     LaunchedEffect(selectedFilter) {
         attachedNodes.forEach {
@@ -148,7 +162,11 @@ private fun ARContent() {
             }
             capturedPhoto = try {
                 val shot = captureSurface(view)
-                if (selectedFilter == FilterType.GRADUATION) stampGraduationBanner(shot) else shot
+                when (selectedFilter) {
+                    FilterType.GRADUATION -> stampGraduationBanner(shot)
+                    FilterType.HARDEST -> stampHardestSubject(shot, hardestSubject)
+                    else -> shot
+                }
             } catch (e: Exception) {
                 statusMessage = "Couldn't capture photo"
                 null
@@ -220,6 +238,12 @@ private fun ARContent() {
 
         if (selectedFilter == FilterType.GRADUATION) {
             GraduationOverlay()
+        }
+        if (selectedFilter == FilterType.HARDEST) {
+            HardestSubjectOverlay(
+                subjects = HARDEST_SUBJECTS,
+                onResult = { hardestSubject = it }
+            )
         }
 
         Box(
@@ -391,6 +415,74 @@ private fun GraduationOverlay(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold
             )
             Text(text = "🎓", fontSize = 24.sp)
+        }
+    }
+}
+
+@Composable
+private fun HardestSubjectOverlay(
+    subjects: List<String>,
+    onResult: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var index by remember { mutableStateOf(0) }
+    var spinning by remember { mutableStateOf(true) }
+    var spinKey by remember { mutableStateOf(0) }
+
+    LaunchedEffect(spinKey) {
+        spinning = true
+        val target = Random.nextInt(subjects.size)
+        val steps = subjects.size * 3 + target   // неколку полни кругови, па застани
+        var stepDelay = 45L
+        for (i in 0..steps) {
+            index = i % subjects.size
+            delay(stepDelay)
+            stepDelay += 11L                      // постепено забавување (slot-machine)
+        }
+        index = target
+        spinning = false
+        onResult(subjects[target])
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { spinKey++ }
+    ) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 70.dp, start = 24.dp, end = 24.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color.Black.copy(alpha = 0.6f))
+                .padding(horizontal = 22.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = if (spinning) "🎲 SPINNING…" else "🔥 HARDEST SUBJECT 🔥",
+                color = Color(0xFFFFC828),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = subjects[index],
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            if (!spinning) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = "tap to spin again",
+                    color = Color.White.copy(alpha = 0.65f),
+                    fontSize = 11.sp
+                )
+            }
         }
     }
 }
