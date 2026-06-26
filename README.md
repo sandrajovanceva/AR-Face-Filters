@@ -9,8 +9,8 @@ Originally themed around **FINKI** graduation, with a graduation-cap filter and 
 - **Real-time AR face filters** tracked to your face with the front camera.
 - **10 filters:**
   - ✕ None
-  - 🎓 Graduation — tilted cap with a logo, a "FINKI GRADUATES" banner, and falling confetti
-  - 🎲 Hardest — spins through university subjects and lands on a random "hardest" one (tap to spin again)
+  - 🎓 Graduation - tilted cap with a logo, a "FINKI GRADUATES" banner, and falling confetti
+  - 🎲 Hardest - spins through university subjects and lands on a random "hardest" one (tap to spin again)
   - 👓 Glasses
   - 🐶 Dog · 🐱 Cat · 🐰 Bunny
   - 👑 Crown · 😈 Devil · 🤡 Clown
