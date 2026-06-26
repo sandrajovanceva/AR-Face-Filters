@@ -4,21 +4,41 @@ import com.google.ar.core.AugmentedFace
 import com.google.ar.core.AugmentedFace.RegionType
 import com.google.ar.core.Pose
 import io.github.sceneview.math.Position
+import kotlin.math.cos
+import kotlin.math.sin
 
 data class FilterAttachment(
     val modelPath: String,
     val region: RegionType? = null,
     val offset: Position = Position(0f, 0f, 0f),
+    val rotation: Position = Position(0f, 0f, 0f), // Euler степени (x, y, z)
     val scaleToUnits: Float? = null
 ) {
     private val offsetPose: Pose by lazy {
-        Pose.makeTranslation(offset.x, offset.y, offset.z)
+        Pose(
+            floatArrayOf(offset.x, offset.y, offset.z),
+            eulerToQuaternion(rotation.x, rotation.y, rotation.z)
+        )
     }
 
     fun poseOn(face: AugmentedFace): Pose {
         val base = region?.let { face.getRegionPose(it) } ?: face.centerPose
         return base.compose(offsetPose)
     }
+}
+
+private fun eulerToQuaternion(xDeg: Float, yDeg: Float, zDeg: Float): FloatArray {
+    val rx = Math.toRadians(xDeg.toDouble())
+    val ry = Math.toRadians(yDeg.toDouble())
+    val rz = Math.toRadians(zDeg.toDouble())
+    val cx = cos(rx / 2); val sx = sin(rx / 2)
+    val cy = cos(ry / 2); val sy = sin(ry / 2)
+    val cz = cos(rz / 2); val sz = sin(rz / 2)
+    val w = cx * cy * cz + sx * sy * sz
+    val x = sx * cy * cz - cx * sy * sz
+    val y = cx * sy * cz + sx * cy * sz
+    val z = cx * cy * sz - sx * sy * cz
+    return floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat(), w.toFloat())
 }
 
 enum class FilterType(
@@ -33,12 +53,14 @@ enum class FilterType(
             FilterAttachment(
                 modelPath = "models/graduation_cap.glb",
                 region = null, // centerPose = центар на главата
-                offset = Position(0f, 0.10f, -0.015f)
+                offset = Position(0f, 0.078f, -0.015f),
+                rotation = Position(0f, 0f, 18f) // навалена капа
             ),
             FilterAttachment(
                 modelPath = "models/io_logo.glb",
                 region = null, // центрирано на предниот дел од капата
-                offset = Position(-0.003f, 0.108f, 0.05f),
+                offset = Position(-0.005f, 0.085f, 0.05f),
+                rotation = Position(0f, 0f, 18f), // се навалува заедно со капата
                 scaleToUnits = 0.03f
             )
         )

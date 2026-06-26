@@ -213,6 +213,9 @@ private fun ARContent() {
             sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
             sessionConfiguration = { _, config ->
                 config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
+                // Исклучи ја AR проценката на светлина — инаку моделите се
+                // преосветлуваат (капата изгледаше „осончана" / избледена)
+                config.lightEstimationMode = Config.LightEstimationMode.DISABLED
             },
             onViewCreated = { sceneView = this },
             onSessionUpdated = { session, frame ->
